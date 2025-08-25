@@ -10,9 +10,12 @@ import (
 
 const (
 	oxrBaseUrl = "https://openexchangerates.org/api"
+	listenAddr = ":8080"
 )
 
 func main() {
+	// Should probably use something like godotenv for a real world scenario
+	// also for the base url, listening address
 	oxrAppId := os.Getenv("OPENEXCHANGERATES_APP_ID")
 	if oxrAppId == "" {
 		panic("OPENEXCHANGERATES_APP_ID env variable must be set")
@@ -21,5 +24,5 @@ func main() {
 	oxrClient := oxr.NewClient(oxrBaseUrl, oxrAppId)
 	cryptoClient := cryptoexchange.NewClient()
 	httpServer := api.NewServer(oxrClient, cryptoClient)
-	httpServer.Run(":8080")
+	httpServer.Run(listenAddr)
 }
