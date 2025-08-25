@@ -1,6 +1,7 @@
 # Readme
 
-A simple go app for fetching OpenExchangeRates rates for a set of given currencies
+A simple go app for fetching OpenExchangeRates rates for a set of given currencies.
+
 Some mocked 'crypto exchange functionality' as well
 
 ## Usage
