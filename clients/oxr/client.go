@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/blesniewski/kryptonim/helpers"
-	"github.com/blesniewski/kryptonim/models"
+	"github.com/blesniewski/knm/helpers"
+	"github.com/blesniewski/knm/models"
 	"github.com/samber/lo"
 )
 

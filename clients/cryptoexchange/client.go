@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blesniewski/kryptonim/helpers"
-	"github.com/blesniewski/kryptonim/models"
+	"github.com/blesniewski/knm/helpers"
+	"github.com/blesniewski/knm/models"
 )
 
 type Client struct {

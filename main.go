@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/blesniewski/kryptonim/api"
-	"github.com/blesniewski/kryptonim/clients/cryptoexchange"
-	"github.com/blesniewski/kryptonim/clients/oxr"
+	"github.com/blesniewski/knm/api"
+	"github.com/blesniewski/knm/clients/cryptoexchange"
+	"github.com/blesniewski/knm/clients/oxr"
 )
 
 const (

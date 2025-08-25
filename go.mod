@@ -1,4 +1,4 @@
-module github.com/blesniewski/kryptonim
+module github.com/blesniewski/knm
 
 go 1.24.5
 
