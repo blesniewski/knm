@@ -24,13 +24,13 @@ func (m *MockCryptoConversionClient) GetConversionRate(from, to string, amount f
 	return models.CryptoPair{From: "BTC", To: "USDT", Amount: 45000.00}, nil
 }
 
-func SetupForTesting() *Server {
+func setupForTesting() *Server {
 	server := NewServer(&MockExchangeRateClient{}, &MockCryptoConversionClient{})
 	return server
 }
 
 func TestRates(t *testing.T) {
-	server := SetupForTesting()
+	server := setupForTesting()
 	tc := []struct {
 		currencies     string
 		expectedStatus int
@@ -51,8 +51,29 @@ func TestRates(t *testing.T) {
 	}
 }
 
+func TestRatesBadParams(t *testing.T) {
+	server := setupForTesting()
+	tc := []struct {
+		reqPath string
+	}{
+		{"/rates?currencies="},
+		{"/rates?currencies=USD"},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.reqPath, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.reqPath, nil)
+			w := httptest.NewRecorder()
+
+			server.router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	}
+}
+
 func TestExchange(t *testing.T) {
-	server := SetupForTesting()
+	server := setupForTesting()
 	tc := []struct {
 		from           string
 		to             string
@@ -72,6 +93,30 @@ func TestExchange(t *testing.T) {
 			server.router.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
+		})
+	}
+}
+
+func TestExchangeBadParams(t *testing.T) {
+	server := setupForTesting()
+	tc := []struct {
+		reqPath string
+	}{
+		{"/exchange?from=BTC&to=USDT&amount=abc"},
+		{"/exchange?from=BTC"},
+		{"/exchange?from=BTC&to=ETH"},
+		{"/exchange?to="},
+		{"/exchange?amount=1"},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.reqPath, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.reqPath, nil)
+			w := httptest.NewRecorder()
+
+			server.router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
 		})
 	}
 }
