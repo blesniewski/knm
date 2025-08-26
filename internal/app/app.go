@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/blesniewski/knm/internal/clients/cryptoexchange"
@@ -33,11 +30,8 @@ func Run(ctx context.Context) error {
 		serverErr <- httpServer.Run(cfg.ListenAddr)
 	}()
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	select {
-	case sig := <-sigCh:
-		fmt.Printf("Received signal: %v, shutting down...\n", sig)
+	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
