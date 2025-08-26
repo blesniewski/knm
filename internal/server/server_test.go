@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: https://github.com/uber-go/mock for more complex stuff
+
 type MockExchangeRateClient struct{}
 
 func (m *MockExchangeRateClient) GetRatesForCurrencies(_ context.Context, currencies []string) ([]models.CurrencyPair, error) {
@@ -26,7 +28,7 @@ func (m *MockCryptoConversionClient) GetConversionRate(from, to string, amount f
 }
 
 func setupForTesting() *Server {
-	server := NewServer(&MockExchangeRateClient{}, &MockCryptoConversionClient{})
+	server := New(&MockExchangeRateClient{}, &MockCryptoConversionClient{})
 	return server
 }
 
@@ -45,7 +47,7 @@ func TestRates(t *testing.T) {
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/rates?currencies="+tt.currencies, nil)
 			w := httptest.NewRecorder()
 
-			server.router.ServeHTTP(w, req)
+			server.httpServer.Handler.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 		})
@@ -66,7 +68,7 @@ func TestRatesBadParams(t *testing.T) {
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tt.reqPath, nil)
 			w := httptest.NewRecorder()
 
-			server.router.ServeHTTP(w, req)
+			server.httpServer.Handler.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 		})
@@ -91,7 +93,7 @@ func TestExchange(t *testing.T) {
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/exchange?from="+tt.from+"&to="+tt.to+"&amount="+tt.amount, nil)
 			w := httptest.NewRecorder()
 
-			server.router.ServeHTTP(w, req)
+			server.httpServer.Handler.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 		})
@@ -115,7 +117,7 @@ func TestExchangeBadParams(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.reqPath, nil)
 			w := httptest.NewRecorder()
 
-			server.router.ServeHTTP(w, req)
+			server.httpServer.Handler.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 		})

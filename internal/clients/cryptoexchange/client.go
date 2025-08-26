@@ -18,6 +18,7 @@ type cryptoData struct {
 }
 
 func NewClient() *Client {
+	// TODO: add fetching data from file ?
 	return &Client{
 		data: map[string]cryptoData{
 			"BEER":  {precision: 18, rate: 0.00002461},
@@ -34,12 +35,12 @@ func (c *Client) GetConversionRate(from, to string, amount float64) (models.Cryp
 		return models.CryptoPair{}, fmt.Errorf("invalid amount: %f", amount)
 	}
 
-	fromData, err := c.currency(strings.ToUpper(from))
+	fromData, err := c.currency(from)
 	if err != nil {
 		return models.CryptoPair{}, fmt.Errorf("from currency: %w", err)
 	}
 
-	toData, err := c.currency(strings.ToUpper(to))
+	toData, err := c.currency(to)
 	if err != nil {
 		return models.CryptoPair{}, fmt.Errorf("to currency: %w", err)
 	}
@@ -57,7 +58,7 @@ func (c *Client) GetConversionRate(from, to string, amount float64) (models.Cryp
 }
 
 func (c *Client) currency(cur string) (cryptoData, error) {
-	curData, ok := c.data[cur]
+	curData, ok := c.data[strings.ToUpper(cur)]
 	if !ok {
 		return cryptoData{}, fmt.Errorf("unknown currency: %s", cur)
 	}

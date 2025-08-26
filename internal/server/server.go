@@ -11,7 +11,7 @@ import (
 )
 
 type Server struct {
-	router             *gin.Engine
+	httpServer         *http.Server
 	exchangeRateClient ExchangeRateClient
 	cryptoClient       CryptoConversionClient
 }
@@ -24,7 +24,7 @@ type CryptoConversionClient interface {
 	GetConversionRate(from, to string, amount float64) (models.CryptoPair, error)
 }
 
-func NewServer(exchangeRateClient ExchangeRateClient, cryptoClient CryptoConversionClient) *Server {
+func New(exchangeRateClient ExchangeRateClient, cryptoClient CryptoConversionClient) *Server {
 	s := &Server{
 		exchangeRateClient: exchangeRateClient,
 		cryptoClient:       cryptoClient,
@@ -34,14 +34,21 @@ func NewServer(exchangeRateClient ExchangeRateClient, cryptoClient CryptoConvers
 }
 
 func (s *Server) Run(addr string) error {
-	return s.router.Run(addr)
+	s.httpServer.Addr = addr
+	return s.httpServer.ListenAndServe()
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.httpServer.Shutdown(ctx)
 }
 
 func (s *Server) registerNewRoutes() {
 	router := gin.Default()
 	router.GET("/rates", s.handleGetRates)
 	router.GET("/exchange", s.handleGetExchange)
-	s.router = router
+	s.httpServer = &http.Server{
+		Handler: router,
+	}
 }
 
 func (s *Server) handleGetRates(c *gin.Context) {

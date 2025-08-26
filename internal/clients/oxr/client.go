@@ -21,14 +21,15 @@ type Client struct {
 	httpClient     *http.Client
 	updateInterval time.Duration
 
-	mutex        sync.Mutex
+	// TODO: consider using sync.Map for the latestRates
+	// TODO: consider using sync.Atomic for the latestUpdate
+	mu           sync.Mutex // <- mutex hat
 	latestRates  map[string]float64
 	latestUpdate time.Time
 }
 
 // ^ Would consider RWmutex for a real world scenario where the rates would actually
 // be updated before the program finishes
-
 func NewClient(ctx context.Context, baseURL, appID string, opts ...Option) (*Client, error) {
 	c := &Client{
 		baseURL:        baseURL,
@@ -64,16 +65,18 @@ func WithUpdateInterval(interval time.Duration) Option {
 }
 
 func (c *Client) getLatestRates(ctx context.Context) error {
-	requestUrl, err := url.JoinPath(c.baseURL, "/latest.json")
+	u, err := url.ParseRequestURI(c.baseURL)
 	if err != nil {
-		return fmt.Errorf("failed to join base URL and latest.json: %w", err)
+		return fmt.Errorf("failed to parse base URL: %w", err)
 	}
 
-	params := url.Values{}
-	params.Set("app_id", c.appID)
-	requestUrl = requestUrl + "?" + params.Encode()
+	// TODO: check which url manipulation is safer
+	q := u.Query()
+	q.Set("app_id", c.appID)
+	u.RawQuery = q.Encode()
+	u = u.JoinPath("latest.json")
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -95,10 +98,10 @@ func (c *Client) getLatestRates(ctx context.Context) error {
 		return fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	c.mutex.Lock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.latestRates = latestResponse.Rates
 	c.latestUpdate = time.Unix(latestResponse.Timestamp, 0)
-	c.mutex.Unlock()
 
 	return nil
 }
@@ -118,12 +121,12 @@ func (c *Client) GetRatesForCurrencies(ctx context.Context, currencies []string)
 
 	if c.shouldRefreshRates() {
 		if err := c.getLatestRates(ctx); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get latest rates: %w", err)
 		}
 	}
 
 	for _, currency := range currencies {
-		if _, ok := c.latestRates[currency]; !ok {
+		if _, ok := c.getRate(currency); !ok {
 			return nil, fmt.Errorf("unknown currency: %s", currency)
 		}
 	}
@@ -134,10 +137,12 @@ func (c *Client) GetRatesForCurrencies(ctx context.Context, currencies []string)
 			if i == j {
 				continue
 			}
+
 			iRate, ok := c.getRate(currencies[i])
 			if !ok {
 				return nil, fmt.Errorf("unknown currency: %s", currencies[i])
 			}
+
 			jRate, ok := c.getRate(currencies[j])
 			if !ok {
 				return nil, fmt.Errorf("unknown currency: %s", currencies[j])
@@ -158,12 +163,16 @@ func (c *Client) GetRatesForCurrencies(ctx context.Context, currencies []string)
 }
 
 func (c *Client) shouldRefreshRates() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	return time.Since(c.latestUpdate) > c.updateInterval
 }
 
 func (c *Client) getRate(currency string) (float64, bool) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	rate, ok := c.latestRates[currency]
 	return rate, ok
 }

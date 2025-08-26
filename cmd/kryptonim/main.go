@@ -5,25 +5,15 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/blesniewski/knm/internal/api"
-	"github.com/blesniewski/knm/internal/clients/cryptoexchange"
-	"github.com/blesniewski/knm/internal/clients/oxr"
+	"github.com/blesniewski/knm/internal/app"
 )
 
 func main() {
-	cfg, err := NewConfig()
-	if err != nil {
-		panic(err)
-	}
-
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	oxrClient, err := oxr.NewClient(ctx, cfg.Orx.BaseURL, cfg.Orx.AppID)
+	err := app.Run(ctx)
 	if err != nil {
 		panic(err)
 	}
-	cryptoClient := cryptoexchange.NewClient()
-	httpServer := api.NewServer(oxrClient, cryptoClient)
-	httpServer.Run(cfg.ListenAddr)
 }

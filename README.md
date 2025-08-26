@@ -22,6 +22,12 @@ Two endpoints:
 
 ### Running in a docker container
 
-`docker build . -t kryptonim-app`
+`make docker-build`
 
-`docker run --rm --name kryptonim-app --publish 8080:8080 --env OPENEXCHANGERATES_APP_ID=<your_app_id> kryptonim-app`
+`docker run --rm --name kryptonim-app --publish 8080:8080 --env OPENEXCHANGERATES_APP_ID=<your_app_id> knm`
+
+or (need to set the oxr APP_ID in the makefile first):
+
+`make docker-run`
+
+Or check the makefile for some more options

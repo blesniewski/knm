@@ -1,8 +1,9 @@
-package helpers
+package helpers_test
 
 import (
 	"testing"
 
+	"github.com/blesniewski/knm/internal/helpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +23,7 @@ func TestRoundToPrecision(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := RoundToPrecision(tt.value, tt.precision)
+			result := helpers.RoundToPrecision(tt.value, tt.precision)
 			require.Equal(t, tt.expected, result)
 		})
 	}

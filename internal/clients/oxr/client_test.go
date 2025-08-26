@@ -18,7 +18,7 @@ type mockRoundTripper struct {
 	extraFn func()
 }
 
-func (rt *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (rt *mockRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
 	rt.extraFn()
 
 	return &http.Response{
@@ -92,6 +92,24 @@ func TestHappyPathSyntheticData(t *testing.T) {
 		{
 			name:          "USD to JPY",
 			currencies:    []string{"USD", "JPY"},
+			expectedPairs: nil,
+			shouldErr:     true,
+		},
+		{
+			name:          "USD to usd",
+			currencies:    []string{"USD", "usd"},
+			expectedPairs: nil,
+			shouldErr:     true,
+		},
+		{
+			name:          "one currency",
+			currencies:    []string{"USD"},
+			expectedPairs: nil,
+			shouldErr:     true,
+		},
+		{
+			name:          "unknown currency",
+			currencies:    []string{"USD", "unknown"},
 			expectedPairs: nil,
 			shouldErr:     true,
 		},
