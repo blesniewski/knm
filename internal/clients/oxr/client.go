@@ -21,7 +21,6 @@ type Client struct {
 	httpClient     *http.Client
 	updateInterval time.Duration
 
-	// TODO: consider using sync.Map for the latestRates
 	// TODO: consider using sync.Atomic for the latestUpdate
 	mu           sync.Mutex // <- mutex hat
 	latestRates  map[string]float64
@@ -30,6 +29,7 @@ type Client struct {
 
 // ^ Would consider RWmutex for a real world scenario where the rates would actually
 // be updated before the program finishes
+
 func NewClient(ctx context.Context, baseURL, appID string, opts ...Option) (*Client, error) {
 	c := &Client{
 		baseURL:        baseURL,
@@ -70,7 +70,6 @@ func (c *Client) getLatestRates(ctx context.Context) error {
 		return fmt.Errorf("failed to parse base URL: %w", err)
 	}
 
-	// TODO: check which url manipulation is safer
 	q := u.Query()
 	q.Set("app_id", c.appID)
 	u.RawQuery = q.Encode()
