@@ -1,14 +1,15 @@
-package cryptoexchange
+package cryptoexchange_test
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/blesniewski/knm/internal/clients/cryptoexchange"
 	"github.com/stretchr/testify/require"
 )
 
 func TestHappyPath(t *testing.T) {
-	client := NewClient()
+	client := cryptoexchange.NewClient()
 
 	pair, err := client.GetConversionRate("WBTC", "USDT", 1.0)
 	if err != nil {
@@ -33,7 +34,9 @@ func TestParis(t *testing.T) {
 		{"MATIC", "GATE", 0.999, 0.0, true},
 		{"USDT", "GATE", 0.0, 0.0, true},
 	}
-	client := NewClient()
+
+	client := cryptoexchange.NewClient()
+
 	for _, tt := range tc {
 		t.Run(fmt.Sprintf("from=%s_to=%s_amount=%f", tt.from, tt.to, tt.amount), func(t *testing.T) {
 			pair, err := client.GetConversionRate(tt.from, tt.to, tt.amount)

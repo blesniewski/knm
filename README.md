@@ -13,12 +13,14 @@ Two endpoints:
 
 ## Running it
 
+> Requires OpenExchangeRates ID to fetch data.
+
 ### Running locally
 
 - Requires a OPENEXCHANGERATES_APP_ID env variable with APP ID for the OXR API
 - Listens on port 8080, not configurable right now (should be if this was going to be something else than a simple project)
 
-### Running in a docker container:
+### Running in a docker container
 
 `docker build . -t kryptonim-app`
 

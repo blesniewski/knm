@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ type Server struct {
 }
 
 type ExchangeRateClient interface {
-	GetRatesForCurrencies(currencies []string) ([]models.CurrencyPair, error)
+	GetRatesForCurrencies(ctx context.Context, currencies []string) ([]models.CurrencyPair, error)
 }
 
 type CryptoConversionClient interface {
@@ -51,7 +52,7 @@ func (s *Server) handleGetRates(c *gin.Context) {
 		return
 	}
 
-	rates, err := s.exchangeRateClient.GetRatesForCurrencies(currencyList)
+	rates, err := s.exchangeRateClient.GetRatesForCurrencies(c.Request.Context(), currencyList)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, "")
 		return

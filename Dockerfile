@@ -1,4 +1,4 @@
-FROM golang:1.24.5-alpine AS builder
+FROM docker.io/library/golang:1.25.0-alpine AS builder
 
 WORKDIR /build
 
@@ -6,9 +6,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o kryptonim-app
+RUN go build -o kryptonim-app ./cmd/kryptonim
 
-FROM alpine:3.20
+FROM docker.io/library/alpine:3.22.1
 
 WORKDIR /app
 
@@ -16,4 +16,4 @@ COPY --from=builder /build/kryptonim-app .
 
 EXPOSE 8080
 
-CMD ["./kryptonim-app"]
+ENTRYPOINT ["./kryptonim-app"]

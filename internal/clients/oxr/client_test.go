@@ -1,7 +1,6 @@
 package oxr
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -12,37 +11,44 @@ import (
 	"github.com/blesniewski/knm/internal/helpers"
 	"github.com/blesniewski/knm/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockRoundTripper struct {
-	response *http.Response
-	extraFn  func()
+	extraFn func()
 }
 
 func (rt *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	rt.extraFn()
-	return rt.response, nil
-}
 
-func setupClientForTesting(extraRTFunc func()) *Client {
-	mockResponse := &http.Response{
+	return &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(strings.NewReader(`{"base":"USD","rates":{"EUR":0.858611,"USD":1.00}}`)),
-	}
-	return NewClient("https://openexchangerates.org/api", "test_app_id").
-		WithOptions(
-			WithHttpClient(&http.Client{Transport: &mockRoundTripper{response: mockResponse, extraFn: extraRTFunc}}),
-			WithUpdateInterval(1*time.Minute),
-		)
+	}, nil
+}
+
+func setupClientForTesting(t *testing.T, extraRTFunc func()) *Client {
+	t.Helper()
+
+	client, err := NewClient(
+		t.Context(),
+		"https://openexchangerates.org/api",
+		"test_app_id",
+		WithHTTPClient(&http.Client{Transport: &mockRoundTripper{extraFn: extraRTFunc}}),
+		WithUpdateInterval(1*time.Minute),
+	)
+	require.NoError(t, err)
+
+	return client
 }
 
 func TestHappyPathWithFetchingRates(t *testing.T) {
 	rtCalls := 0
-	client := setupClientForTesting(func() {
+	client := setupClientForTesting(t, func() {
 		rtCalls += 1
 	})
 
-	response, err := client.GetRatesForCurrencies([]string{"USD", "EUR"})
+	response, err := client.GetRatesForCurrencies(t.Context(), []string{"USD", "EUR"})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -55,29 +61,18 @@ func TestHappyPathWithFetchingRates(t *testing.T) {
 	if !reflect.DeepEqual(response, expectedPairs) {
 		t.Errorf("expected %v, got %v", expectedPairs, response)
 	}
-	assert.Equal(t, rtCalls, 1, "expected RoundTrip to be called once")
+	assert.Equal(t, rtCalls, 2, "expected RoundTrip to be called twice - one for init and one for fetching rates")
 }
 
 func TestHappyPathSyntheticData(t *testing.T) {
-	rtCalls := 0
-	client := setupClientForTesting(func() {
-		rtCalls += 1
-	})
-	client.latestRates = map[string]float64{
-		"USD": 1.00,
-		"EUR": 0.8,
-		"PLN": 3.5,
-		"GBP": 0.75,
-	}
-	client.latestUpdate = time.Now()
-	client.updateInterval = 60 * time.Minute
-
 	tc := []struct {
+		name          string
 		currencies    []string
 		expectedPairs []models.CurrencyPair
 		shouldErr     bool
 	}{
 		{
+			name:       "USD to EUR",
 			currencies: []string{"USD", "EUR"},
 			expectedPairs: []models.CurrencyPair{
 				{From: "USD", To: "EUR", Rate: helpers.RoundToPrecision(0.8, 2)},
@@ -86,6 +81,7 @@ func TestHappyPathSyntheticData(t *testing.T) {
 			shouldErr: false,
 		},
 		{
+			name:       "PLN to GBP",
 			currencies: []string{"PLN", "GBP"},
 			expectedPairs: []models.CurrencyPair{
 				{From: "PLN", To: "GBP", Rate: helpers.RoundToPrecision(0.75/3.5, 2)},
@@ -94,24 +90,37 @@ func TestHappyPathSyntheticData(t *testing.T) {
 			shouldErr: false,
 		},
 		{
+			name:          "USD to JPY",
 			currencies:    []string{"USD", "JPY"},
 			expectedPairs: nil,
 			shouldErr:     true,
 		},
 	}
 
-	for _, tc := range tc {
-		t.Run(fmt.Sprintf("%v", tc.currencies), func(t *testing.T) {
-			response, err := client.GetRatesForCurrencies(tc.currencies)
-
-			if (err != nil) != tc.shouldErr {
-				t.Fatalf("expected error: %v, got: %v", tc.shouldErr, err)
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			rtCalls := 0
+			client := setupClientForTesting(t, func() {
+				rtCalls++
+			})
+			client.latestRates = map[string]float64{
+				"USD": 1.00,
+				"EUR": 0.8,
+				"PLN": 3.5,
+				"GBP": 0.75,
 			}
+			client.latestUpdate = time.Now()
+			client.updateInterval = 60 * time.Minute
 
-			if !reflect.DeepEqual(response, tc.expectedPairs) {
-				t.Errorf("expected %v, got %v", tc.expectedPairs, response)
+			response, err := client.GetRatesForCurrencies(t.Context(), tt.currencies)
+
+			if tt.shouldErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedPairs, response)
 			}
-			assert.Equal(t, rtCalls, 0, "expected RoundTrip to be called zero times")
+			assert.Equal(t, 1, rtCalls, "expected RoundTrip to be called only once during init")
 		})
 	}
 }

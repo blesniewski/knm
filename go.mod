@@ -3,7 +3,9 @@ module github.com/blesniewski/knm
 go 1.24.5
 
 require (
+	github.com/caarlos0/env/v11 v11.3.1
 	github.com/gin-gonic/gin v1.10.1
+	github.com/joho/godotenv v1.5.1
 	github.com/samber/lo v1.51.0
 	github.com/stretchr/testify v1.9.0
 )

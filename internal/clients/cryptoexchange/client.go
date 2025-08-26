@@ -33,17 +33,15 @@ func (c *Client) GetConversionRate(from, to string, amount float64) (models.Cryp
 	if amount <= 0 {
 		return models.CryptoPair{}, fmt.Errorf("invalid amount: %f", amount)
 	}
-	from = strings.ToUpper(from)
-	to = strings.ToUpper(to)
 
-	fromData, ok := c.data[from]
-	if !ok {
-		return models.CryptoPair{}, fmt.Errorf("unknown currency: %s", from)
+	fromData, err := c.currency(strings.ToUpper(from))
+	if err != nil {
+		return models.CryptoPair{}, fmt.Errorf("from currency: %w", err)
 	}
 
-	toData, ok := c.data[to]
-	if !ok {
-		return models.CryptoPair{}, fmt.Errorf("unknown currency: %s", to)
+	toData, err := c.currency(strings.ToUpper(to))
+	if err != nil {
+		return models.CryptoPair{}, fmt.Errorf("to currency: %w", err)
 	}
 
 	fromAmountUSD := fromData.rate * amount
@@ -56,4 +54,13 @@ func (c *Client) GetConversionRate(from, to string, amount float64) (models.Cryp
 		To:     to,
 		Amount: resultAmount,
 	}, nil
+}
+
+func (c *Client) currency(cur string) (cryptoData, error) {
+	curData, ok := c.data[cur]
+	if !ok {
+		return cryptoData{}, fmt.Errorf("unknown currency: %s", cur)
+	}
+
+	return curData, nil
 }

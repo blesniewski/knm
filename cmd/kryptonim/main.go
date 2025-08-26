@@ -1,28 +1,29 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
 
 	"github.com/blesniewski/knm/internal/api"
 	"github.com/blesniewski/knm/internal/clients/cryptoexchange"
 	"github.com/blesniewski/knm/internal/clients/oxr"
 )
 
-const (
-	oxrBaseUrl = "https://openexchangerates.org/api"
-	listenAddr = ":8080"
-)
-
 func main() {
-	// Should probably use something like godotenv for a real world scenario
-	// also for the base url, listening address
-	oxrAppId := os.Getenv("OPENEXCHANGERATES_APP_ID")
-	if oxrAppId == "" {
-		panic("OPENEXCHANGERATES_APP_ID env variable must be set")
+	cfg, err := NewConfig()
+	if err != nil {
+		panic(err)
 	}
 
-	oxrClient := oxr.NewClient(oxrBaseUrl, oxrAppId)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
+
+	oxrClient, err := oxr.NewClient(ctx, cfg.Orx.BaseURL, cfg.Orx.AppID)
+	if err != nil {
+		panic(err)
+	}
 	cryptoClient := cryptoexchange.NewClient()
 	httpServer := api.NewServer(oxrClient, cryptoClient)
-	httpServer.Run(listenAddr)
+	httpServer.Run(cfg.ListenAddr)
 }

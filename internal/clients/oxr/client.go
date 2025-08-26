@@ -1,6 +1,7 @@
 package oxr
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,38 +19,39 @@ type Client struct {
 	baseURL        string
 	appID          string
 	httpClient     *http.Client
-	latestRates    map[string]float64
-	latestUpdate   time.Time
 	updateInterval time.Duration
-	mutex          sync.Mutex
+
+	mutex        sync.Mutex
+	latestRates  map[string]float64
+	latestUpdate time.Time
 }
 
 // ^ Would consider RWmutex for a real world scenario where the rates would actually
 // be updated before the program finishes
 
-func NewClient(baseURL, appID string) *Client {
+func NewClient(ctx context.Context, baseURL, appID string, opts ...Option) (*Client, error) {
 	c := &Client{
 		baseURL:        baseURL,
 		appID:          appID,
-		httpClient:     &http.Client{},
+		httpClient:     http.DefaultClient,
 		latestRates:    make(map[string]float64),
 		updateInterval: 1 * time.Hour,
-		mutex:          sync.Mutex{},
 	}
-	c.getLatestRates()
-	return c
-}
 
-func (c *Client) WithOptions(options ...Option) *Client {
-	for _, opt := range options {
+	for _, opt := range opts {
 		opt(c)
 	}
-	return c
+
+	if err := c.getLatestRates(ctx); err != nil {
+		return nil, fmt.Errorf("failed to get latest rates: %w", err)
+	}
+
+	return c, nil
 }
 
 type Option func(*Client)
 
-func WithHttpClient(client *http.Client) Option {
+func WithHTTPClient(client *http.Client) Option {
 	return func(c *Client) {
 		c.httpClient = client
 	}
@@ -61,33 +63,36 @@ func WithUpdateInterval(interval time.Duration) Option {
 	}
 }
 
-func (c *Client) getLatestRates() error {
+func (c *Client) getLatestRates(ctx context.Context) error {
 	requestUrl, err := url.JoinPath(c.baseURL, "/latest.json")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to join base URL and latest.json: %w", err)
 	}
+
 	params := url.Values{}
 	params.Set("app_id", c.appID)
 	requestUrl = requestUrl + "?" + params.Encode()
 
-	req, err := http.NewRequest("GET", requestUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Add("accept", "application/json")
+	req.Header.Add("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to do request: %w", err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to get latest rates: %s", resp.Status)
 	}
 
 	var latestResponse LatestResponse
-	if err := json.NewDecoder(resp.Body).Decode(&latestResponse); err != nil {
-		return err
+	err = json.NewDecoder(resp.Body).Decode(&latestResponse)
+	if err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	c.mutex.Lock()
@@ -98,17 +103,21 @@ func (c *Client) getLatestRates() error {
 	return nil
 }
 
-func (c *Client) GetRatesForCurrencies(currencies []string) ([]models.CurrencyPair, error) {
-	currencies = lo.Uniq(currencies)
-	if len(currencies) < 2 {
-		return nil, fmt.Errorf("at least two currencies are required")
-	}
+func (c *Client) GetRatesForCurrencies(ctx context.Context, currencies []string) ([]models.CurrencyPair, error) {
 	for i := range currencies {
 		currencies[i] = strings.ToUpper(currencies[i])
 	}
 
+	if len(lo.Uniq(currencies)) != len(currencies) {
+		return nil, fmt.Errorf("duplicate currencies")
+	}
+
+	if len(currencies) < 2 {
+		return nil, fmt.Errorf("at least two currencies are required")
+	}
+
 	if c.shouldRefreshRates() {
-		if err := c.getLatestRates(); err != nil {
+		if err := c.getLatestRates(ctx); err != nil {
 			return nil, err
 		}
 	}
