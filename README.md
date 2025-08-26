@@ -14,6 +14,7 @@ Two endpoints:
 ## Running it
 
 > Requires OpenExchangeRates ID to fetch data.
+> Can be configured both through ENV variables and a .env file for local running, see `.env.sample`
 
 ### Running locally
 
