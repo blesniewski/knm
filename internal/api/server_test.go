@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/blesniewski/knm/models"
+	"github.com/blesniewski/knm/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 

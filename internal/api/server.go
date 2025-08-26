@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/blesniewski/knm/models"
+	"github.com/blesniewski/knm/internal/models"
 	"github.com/gin-gonic/gin"
 )
 

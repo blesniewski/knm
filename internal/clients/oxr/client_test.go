@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blesniewski/knm/helpers"
-	"github.com/blesniewski/knm/models"
+	"github.com/blesniewski/knm/internal/helpers"
+	"github.com/blesniewski/knm/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,6 +35,7 @@ func setupClientForTesting(extraRTFunc func()) *Client {
 			WithUpdateInterval(1*time.Minute),
 		)
 }
+
 func TestHappyPathWithFetchingRates(t *testing.T) {
 	rtCalls := 0
 	client := setupClientForTesting(func() {
@@ -42,7 +43,6 @@ func TestHappyPathWithFetchingRates(t *testing.T) {
 	})
 
 	response, err := client.GetRatesForCurrencies([]string{"USD", "EUR"})
-
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
